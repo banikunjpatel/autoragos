@@ -1,0 +1,24 @@
+use_structured_outputs: true      # enforce JSON schema from llm/schemas/*
+allow_model_override: true        # allow X-Model header or body.model to override model_map
+enable_caching: true              # enable cache layer for LLM results
+cache_ttl_seconds: 604800         # 7 days
+
+# Default prompt version per task
+prompt_versions:
+  meal_plan: 1
+  recipe: 1
+  grocery: 1
+  prakriti: 1
+
+# Enable/disable individual endpoints (v1)
+endpoints_enabled:
+  healthz: true
+  meal_plan_generate: true
+  recipe_generate: true
+  grocery_list_generate: true
+  grocery_categories_get: true
+  prakriti_assessment: true
+
+# Server-side processing
+deterministic_grocery_aggregation: true  # merge ingredients server-side (not by LLM)
+strict_schema_validation: true           # reject responses not matching schemas/*

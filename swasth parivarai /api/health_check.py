@@ -1,0 +1,11 @@
+# api/v1/health/health_check.py
+from __future__ import annotations
+
+from fastapi import APIRouter
+
+router = APIRouter(tags=["health"])
+
+
+@router.get("/healthz")
+async def healthz() -> dict:
+    return {"ok": True}

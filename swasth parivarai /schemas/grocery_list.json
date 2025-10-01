@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "grocery_list.json",
+  "title": "Aggregated Grocery List",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "region": { "type": "string", "minLength": 1 },
+    "dietType": { "type": "string", "enum": ["veg", "non_veg", "eggs_ok"] },
+    "household": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["single", "family"] },
+        "size": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["type", "size"]
+    },
+    "items": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/grocery" }
+    },
+    "notes": { "type": "string" }
+  },
+  "required": ["region", "dietType", "household", "items"],
+  "$defs": {
+    "grocery": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "qty": { "type": "number" },
+        "unit": { "type": "string", "minLength": 1 },
+        "category": {
+          "type": "string",
+          "enum": ["produce", "grains", "dairy", "spices", "protein", "staples", "bakery", "condiments", "other"]
+        }
+      },
+      "required": ["name", "qty", "unit"]
+    }
+  }
+}

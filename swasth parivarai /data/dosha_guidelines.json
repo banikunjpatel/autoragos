@@ -1,0 +1,18 @@
+{
+  "vata": {
+    "favor": ["warm", "moist", "grounding", "stews", "khichdi", "ghee"],
+    "limit": ["raw", "cold", "dry foods"]
+  },
+  "pitta": {
+    "favor": ["cooling", "coconut", "coriander", "fennel", "mint"],
+    "limit": ["excess chili", "tomato", "sour", "fried"]
+  },
+  "kapha": {
+    "favor": ["light", "warming", "bitter greens", "legumes"],
+    "limit": ["heavy oils", "excess dairy", "sweets"]
+  },
+  "tridoshic": {
+    "favor": ["balanced variety"],
+    "limit": []
+  }
+}

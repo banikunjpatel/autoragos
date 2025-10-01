@@ -1,0 +1,13 @@
+Generate a one-week grocery list for an Indian household.
+
+Context:
+- Region: {{ region }}
+- Diet type: {{ diet_type }}   # "veg" | "non_veg" | "eggs_ok"
+- Household: {{ household.type }} (size={{ household.size }})
+
+Rules:
+- Items: choose common Indian groceries; use metric units (g, kg, ml, L, pcs).
+- Category one of: produce, grains, dairy, spices, protein, staples, bakery, condiments, other.
+- Keep list concise but complete for 7 days.
+
+Return ONLY JSON that conforms to the grocery list schema.

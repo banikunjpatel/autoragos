@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "prakriti_assessment.json",
+  "title": "Prakriti Assessment Result",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "primaryDosha": { "type": "string", "enum": ["vata", "pitta", "kapha", "tridoshic"] },
+    "secondaryDosha": { "type": "string", "enum": ["vata", "pitta", "kapha", "tridoshic"] },
+    "distribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "vata": { "type": "number", "minimum": 0, "maximum": 100 },
+        "pitta": { "type": "number", "minimum": 0, "maximum": 100 },
+        "kapha": { "type": "number", "minimum": 0, "maximum": 100 }
+      },
+      "required": ["vata", "pitta", "kapha"]
+    },
+    "guidance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "foods_to_favor": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "foods_to_avoid": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "lifestyle_tips": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      },
+      "required": ["foods_to_favor", "foods_to_avoid", "lifestyle_tips"]
+    },
+    "notes": { "type": "string" }
+  },
+  "required": ["primaryDosha", "distribution", "guidance"]
+}

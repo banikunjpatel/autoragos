@@ -1,0 +1,20 @@
+app:
+  name: "Swasth Backend"
+  env: "dev"
+  version: "0.1.0"
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  reload: true
+
+cors:
+  allow_origins: ["*"]
+  allow_methods: ["*"]
+  allow_headers: ["*"]
+  allow_credentials: true
+
+llm:
+  request_timeout_s: 45
+  fast_model: "o3-mini"
+  quality_model: "o3" 

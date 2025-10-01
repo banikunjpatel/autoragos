@@ -1,0 +1,15 @@
+Create a detailed, region-aware recipe for the dish below.
+
+Context:
+- Dish: {{ dish }}
+- Region of India: {{ region }}
+- Diet type: {{ diet_type }}   # "veg" | "non_veg" | "eggs_ok"
+- Servings: {{ servings }}
+
+Rules:
+- Ingredients: use metric units (g, kg, ml, L, pcs); 6–16 items; include appropriate spices.
+- Steps: 4–10 clear, numbered lines.
+- Times: include prep_mins and cook_mins.
+- Respect diet constraints strictly.
+
+Return ONLY JSON that conforms to the recipe schema.

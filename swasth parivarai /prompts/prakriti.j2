@@ -1,0 +1,21 @@
+Assess the prakriti (Ayurvedic constitutional makeup) for the profile and responses.
+
+Profile:
+- Name: {{ profile.name }}
+- Age: {{ profile.age or "N/A" }}
+- Gender: {{ profile.gender or "N/A" }}
+- Region: {{ profile.region or "N/A" }}
+
+Answers:
+{% for qa in questions -%}
+- Q: {{ qa.question }}
+  A: {{ qa.answer }}
+{% endfor %}
+
+Rules:
+- Provide a distribution of vata, pitta, and kapha that sums to ~100.
+- Identify the primary dosha and (if applicable) a secondary dosha.
+- Give practical guidance: foods_to_favor, foods_to_avoid, lifestyle_tips.
+- Be concise and actionable.
+
+Return ONLY JSON that conforms to the prakriti assessment schema.

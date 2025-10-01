@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "recipe.json",
+  "title": "Recipe (Region/Diet-aware)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "dish": { "type": "string", "minLength": 1 },
+    "region": { "type": "string", "minLength": 1 },
+    "dietType": { "type": "string", "enum": ["veg", "non_veg", "eggs_ok"] },
+    "servings": { "type": "integer", "minimum": 1 },
+    "recipe": { "$ref": "#/$defs/recipe" },
+    "notes": { "type": "string" }
+  },
+  "required": ["dish", "region", "dietType", "servings", "recipe"],
+  "$defs": {
+    "ingredient": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "qty": { "type": "number", "minimum": 0 },
+        "unit": { "type": "string", "minLength": 1 },
+        "category": {
+          "type": "string",
+          "enum": ["produce", "grains", "dairy", "spices", "protein", "staples", "bakery", "condiments", "other"]
+        }
+      },
+      "required": ["name", "qty", "unit"]
+    },
+    "recipe": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ingredients": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/ingredient" }
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 20,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "prep_mins": { "type": "integer", "minimum": 0 },
+        "cook_mins": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["ingredients", "steps", "prep_mins", "cook_mins"]
+    }
+  }
+}

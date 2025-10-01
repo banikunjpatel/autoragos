@@ -1,0 +1,4 @@
+meal_plan: "gpt-4o"  # quality model
+recipe: "gpt-4o"     # quality model
+grocery: "o3-mini"   # fast model
+prakriti: "o3-mini"  # fast model

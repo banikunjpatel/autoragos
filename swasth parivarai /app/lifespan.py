@@ -4,6 +4,10 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
+import os
+from db.mongo import init_mongo, close_mongo
+from db.rotation_repo import RotationRepository
+
 from fastapi import FastAPI
 
 from config import (
@@ -39,6 +43,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         request_timeout_s=timeout_s,
         task_model_map=task_models,
     )
+    
+    db = await init_mongo(os.getenv("MONGO_URL"), os.getenv("MONGO_DB"))
+    rotation_repo = RotationRepository(db) if db else None
+
+    app.state.db = db
+    app.state.rotation_repo = rotation_repo
 
     # ---- Expose on app.state
     app.state.features = feat
@@ -51,4 +61,5 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     finally:
         # ---- Graceful shutdown
         await close_cache(cache)
+        await close_mongo()
         await llm.aclose()

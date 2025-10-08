@@ -12,7 +12,7 @@ Context:
 Rules:
 1) For each day, provide breakfast, lunch, and dinner with concise dish names.
 2) Each meal must include a realistic recipe:
-   - Ingredients: metric units (g, kg, ml, L, pcs). 6–16 items, include region-appropriate spices.
+   - Ingredients: metric units (g, kg, ml, L, pcs). 6–16 items; region-appropriate spices.
    - Steps: 4–10 short lines.
    - Include prep_mins and cook_mins.
 3) Portioning: set every meal's "serving_size" to the household size ({{ household.size }}).
@@ -20,11 +20,14 @@ Rules:
    - vata: warm, moist, grounding; reduce raw/cold.
    - pitta: cooling, less chili/tomato; use coconut, coriander, fennel.
    - kapha: light, warming, less oil/dairy; more bitter greens, legumes.
-   - tridoshic: balanced variety.
    Add brief adjustments in the day's "notes" when relevant.
 5) Diet constraints: never include restricted ingredients for the chosen diet type.
-6) Grocery list:
+6) Uniqueness:
+   - Do NOT repeat any dish name within this 7-day plan.
+   - Avoid the following recently used dishes entirely: {{ avoid_dishes|join(", ") if avoid_dishes else "none" }}.
+7) Grocery list:
    - Aggregate ingredients for the whole week; sum by (name, unit).
    - Category one of: produce, grains, dairy, spices, protein, staples, bakery, condiments, other.
 
+Randomization seed (do not output this value; use it only to vary choices): {{ seed }}
 Return ONLY JSON that conforms to the provided schema.

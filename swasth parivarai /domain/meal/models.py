@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from typing import List, Literal, Optional
-
+from datetime import datetime
+from typing import Dict
 from pydantic import BaseModel, Field
 
 
@@ -67,6 +68,7 @@ class WeeklyMealPlan(BaseModel):
 
 # API DTOs
 class GenerateMealPlanRequest(BaseModel):
+    userId: str
     weekStart: str
     region: str
     dietType: DietType
@@ -79,3 +81,11 @@ class GenerateMealPlanRequest(BaseModel):
 class GenerateMealPlanResponse(BaseModel):
     plan: WeeklyMealPlan
     meta: dict
+
+class MealPlanDocument(BaseModel):
+    userId: str
+    plan: WeeklyMealPlan
+    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    updatedAt: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    wellnessTips: Optional[Dict[str, List[str]]] = Field(default_factory=dict)
+    modelMeta: Optional[dict] = None

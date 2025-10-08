@@ -1,0 +1,15 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "rate_limit.json",
+	"title": "RateLimit",
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"key": { "type": "string" },
+		"count": { "type": "integer", "default": 0 },
+		"windowStart": { "type": "string", "format": "date-time" },
+		"windowDurationSec": { "type": "integer" },
+		"expiresAt": { "type": "string", "format": "date-time" }
+	},
+	"required": ["key", "windowStart", "windowDurationSec", "expiresAt"]
+}

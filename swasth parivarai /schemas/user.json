@@ -1,0 +1,19 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "user.json",
+	"title": "User",
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"mobile": { "type": "string" },
+		"countryCode": { "type": "string", "default": "+91" },
+		"isVerified": { "type": "boolean", "default": false },
+		"lastLoginAt": { "type": "string", "format": "date-time" },
+		"createdAt": { "type": "string", "format": "date-time" },
+		"updatedAt": { "type": "string", "format": "date-time" },
+		"tokenInvalidBefore": { "type": "string", "format": "date-time" },
+		"isDisabled": { "type": "boolean", "default": false },
+		"disabledReason": { "type": "string" }
+	},
+		"required": ["mobile", "countryCode"]
+}

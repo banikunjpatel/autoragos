@@ -22,3 +22,8 @@ endpoints_enabled:
 # Server-side processing
 deterministic_grocery_aggregation: true  # merge ingredients server-side (not by LLM)
 strict_schema_validation: true           # reject responses not matching schemas/*
+
+variety:
+  enforce_unique_daily: true       # no duplicate dish names in the same week
+  rotation_weeks_window: 4         # avoid dishes used in the last N weeks per user
+  repair_attempts: 1               # extra LLM pass if duplicates/repeats found

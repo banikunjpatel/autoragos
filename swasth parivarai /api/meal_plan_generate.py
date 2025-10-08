@@ -29,7 +29,11 @@ async def generate_meal_plan(
     llm = request.app.state.llm
     cache = request.app.state.cache
 
-    svc = MealPlanService(llm=llm, cache=cache)
+    svc = MealPlanService(
+        llm=request.app.state.llm,
+        cache=request.app.state.cache,
+        rotation_repo=getattr(request.app.state, "rotation_repo", None),
+    )
     final_req = body.model_copy(update={"model": model, "prompt_version": prompt_version})
 
     plan, meta = await svc.generate(final_req)

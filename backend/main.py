@@ -1,6 +1,4 @@
-import json
 import logging
-import os
 from typing import List, Dict, Any
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Path
@@ -10,13 +8,12 @@ from pydantic import BaseModel
 from starlette import status
 from dotenv import load_dotenv
 
-from services.gemini_client import GeminiClient
-from services.qdrant_client import upsert_chunk, search_chunks
-from services.opus_client import run_rag_workflow
-from services.aiml_client import AimlClient
-
 load_dotenv()
 logger = logging.getLogger(__name__)
+
+from services.gemini_client import GeminiClient
+from services.qdrant_client import upsert_chunk, search_chunks
+from services.opus_client import run_review_workflow
 
 app = FastAPI(title="AutoRAG OS Backend", version="1.0.0")
 
@@ -24,7 +21,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["*"], 
     allow_headers=["*"],
 )
 
@@ -33,13 +30,42 @@ class AskRequest(BaseModel):
     question: str
 
 
+class Citation(BaseModel):
+    source: str
+    chunk_index: int
+
+
+class RagResult(BaseModel):
+    answer: str
+    confidence: float
+    citations: List[Citation]
+    needs_human_review: bool
+    review_comment: str
+
+
+class ContextChunk(BaseModel):
+    text: str
+    source: str
+    chunk_index: int
+
+
+class AskResponse(BaseModel):
+    workspace_id: str
+    question: str
+    context_chunks: List[ContextChunk]
+    rag_result: RagResult
+
+
+class UploadResponse(BaseModel):
+    workspace_id: str
+    chunks_indexed: int
+
+
+class HealthResponse(BaseModel):
+    status: str
+
+
 gemini_client = GeminiClient()
-aiml_client = AimlClient()
-
-
-@app.get("/health")
-async def health_check() -> JSONResponse:
-    return JSONResponse(content={"status": "ok"}, status_code=status.HTTP_200_OK)
 
 
 async def _read_files(files: List[UploadFile]) -> List[Dict[str, Any]]:
@@ -56,11 +82,21 @@ async def _read_files(files: List[UploadFile]) -> List[Dict[str, Any]]:
     return file_objs
 
 
+async def _extract_text_for_rag(file_obj: Dict[str, Any]) -> str:
+    text = gemini_client.extract_text_from_file(file_obj)
+    return text or ""
+
+
+@app.get("/health")
+async def health_check() -> HealthResponse:
+    return HealthResponse(status="ok")
+
+
 @app.post("/api/workspaces/{workspace_id}/upload")
 async def upload_workspace_data(
     workspace_id: str = Path(...),
     files: List[UploadFile] = File(...),
-) -> Dict[str, Any]:
+) -> UploadResponse:
     if not files:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -69,7 +105,6 @@ async def upload_workspace_data(
 
     try:
         file_objs = await _read_files(files)
-
         total_chunks = 0
 
         for file_obj in file_objs:
@@ -95,7 +130,7 @@ async def upload_workspace_data(
                 upsert_chunk(workspace_id, vector, payload)
                 total_chunks += 1
 
-        return {"workspace_id": workspace_id, "chunks_indexed": total_chunks}
+        return UploadResponse(workspace_id=workspace_id, chunks_indexed=total_chunks)
 
     except Exception as exc:
         logger.exception("Failed to process workspace upload")
@@ -109,7 +144,7 @@ async def upload_workspace_data(
 async def ask_workspace(
     workspace_id: str = Path(...),
     body: AskRequest = None,
-) -> Dict[str, Any]:
+) -> AskResponse:
     if body is None or not body.question.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -119,27 +154,52 @@ async def ask_workspace(
     question = body.question.strip()
 
     try:
+        # 1) Embed question and retrieve chunks from Qdrant
         q_vector = gemini_client.embed_text(question)
         retrieved = search_chunks(workspace_id, q_vector, limit=5)
 
         context_chunks = []
         for hit in retrieved:
             context_chunks.append(
-                {
-                    "text": hit.get("text", ""),
-                    "source": hit.get("filename", ""),
-                    "chunk_index": hit.get("chunk_index", -1),
-                }
+                ContextChunk(
+                    text=hit.get("text", ""),
+                    source=hit.get("filename", ""),
+                    chunk_index=hit.get("chunk_index", -1),
+                )
             )
 
-        rag_result = run_rag_workflow(question, context_chunks)
+        # 2) Local RAG answer with Gemini
+        base_result = gemini_client.answer_with_context(question, context_chunks)
+        # base_result = { "answer", "confidence", "citations" }
 
-        return {
-            "workspace_id": workspace_id,
-            "question": question,
-            "context_chunks": context_chunks,
-            "rag_result": rag_result,
-        }
+        # 3) Minimal review with Opus (optional governance layer)
+        review_result = run_review_workflow(question, base_result)
+
+        final_answer = review_result.get("approved_answer") or base_result.get("answer", "")
+        needs_human_review = review_result.get("needs_human_review", False)
+        review_comment = (
+            review_result.get("review_comment")
+            or review_result.get("explanation")
+            or ""
+        )
+        # Allow Opus to override citations if it wants, else keep base
+        final_citations = review_result.get("citations") or base_result.get("citations", [])
+        final_confidence = base_result.get("confidence", 0.0)
+
+        rag_result = RagResult(
+            answer=final_answer,
+            confidence=final_confidence,
+            citations=[Citation(source=c.get("source", ""), chunk_index=c.get("chunk_index", -1)) for c in final_citations],
+            needs_human_review=needs_human_review,
+            review_comment=review_comment,
+        )
+
+        return AskResponse(
+            workspace_id=workspace_id,
+            question=question,
+            context_chunks=context_chunks,
+            rag_result=rag_result,
+        )
 
     except Exception as exc:
         logger.exception("Failed to process ask request")
@@ -147,21 +207,3 @@ async def ask_workspace(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
         ) from exc
-
-
-async def _extract_text_for_rag(file_obj: Dict[str, Any]) -> str:
-    content_type = (file_obj.get("content_type") or "").lower()
-    data = file_obj["data"]
-
-    if content_type.startswith("image/"):
-        text = aiml_client.ocr_image_to_text(data)
-        if text:
-            return text
-
-    if content_type.startswith("audio/") or content_type in ("video/mp4", "video/mpeg"):
-        text = aiml_client.audio_to_text(data)
-        if text:
-            return text
-
-    text = gemini_client.extract_text_from_file(file_obj)
-    return text or ""

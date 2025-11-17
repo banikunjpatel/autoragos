@@ -133,27 +133,9 @@ async def ask_workspace(
                 }
             )
 
-        base_result = gemini_client.answer_with_context(question, context_chunks)
-
-        review_result = run_review_workflow(question, base_result)
-
-        final_answer = review_result.get("approved_answer") or base_result.get("answer", "")
-        needs_human_review = review_result.get("needs_human_review", False)
-        review_comment = (
-            review_result.get("review_comment")
-            or review_result.get("explanation")
-            or ""
+        rag_result = gemini_client.answer_with_context(
+            question=question, context_chunks=context_chunks,
         )
-        final_citations = review_result.get("citations") or base_result.get("citations", [])
-        final_confidence = base_result.get("confidence", 0.0)
-
-        rag_result = {
-            "answer": final_answer,
-            "confidence": final_confidence,
-            "citations": final_citations,
-            "needs_human_review": needs_human_review,
-            "review_comment": review_comment,
-        }
 
         return {
             "workspace_id": workspace_id,

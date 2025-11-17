@@ -27,6 +27,7 @@ class GeminiClient:
             "You are a document text extractor. "
             "Read the content of the attached file and return ONLY the plain text content, "
             "with no formatting, explanations, or extra commentary."
+            "you can recive files can be image, pdf, docx, txt, video etc."
         )
 
         contents = [

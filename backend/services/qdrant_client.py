@@ -8,7 +8,8 @@ QDRANT_URL = os.getenv("QDRANT_URL", "")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
 QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "rag_chunks")
 
-VECTOR_SIZE = 768
+VECTOR_SIZE = 768  # must match text-embedding-004
+
 
 _client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 
@@ -45,7 +46,9 @@ def upsert_chunk(workspace_id: str, vector: List[float], payload: Dict[str, Any]
 
 
 def search_chunks(
-    workspace_id: str, query_vector: List[float], limit: int = 5
+    workspace_id: str,
+    query_vector: List[float],
+    limit: int = 5,
 ) -> List[Dict[str, Any]]:
     ensure_collection()
 
@@ -53,7 +56,12 @@ def search_chunks(
         collection_name=QDRANT_COLLECTION,
         query_vector=query_vector,
         query_filter=models.Filter(
-            must=[models.FieldCondition(key="workspace_id", match=models.MatchValue(value=workspace_id))]
+            must=[
+                models.FieldCondition(
+                    key="workspace_id",
+                    match=models.MatchValue(value=workspace_id),
+                )
+            ]
         ),
         limit=limit,
     )

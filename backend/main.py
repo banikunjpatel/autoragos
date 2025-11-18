@@ -1,6 +1,4 @@
-import json
 import logging
-import os
 from typing import List, Dict, Any
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Path
@@ -10,13 +8,13 @@ from pydantic import BaseModel
 from starlette import status
 from dotenv import load_dotenv
 
-from services.gemini_client import GeminiClient
-from services.qdrant_client import upsert_chunk, search_chunks
-from services.opus_client import run_rag_workflow
-from services.aiml_client import AimlClient
-
 load_dotenv()
 logger = logging.getLogger(__name__)
+
+from services.gemini_client import GeminiClient
+from services.qdrant_client import upsert_chunk, search_chunks
+from services.opus_client import run_review_workflow
+
 
 app = FastAPI(title="AutoRAG OS Backend", version="1.0.0")
 
@@ -34,7 +32,6 @@ class AskRequest(BaseModel):
 
 
 gemini_client = GeminiClient()
-aiml_client = AimlClient()
 
 
 @app.get("/health")
@@ -43,7 +40,7 @@ async def health_check() -> JSONResponse:
 
 
 async def _read_files(files: List[UploadFile]) -> List[Dict[str, Any]]:
-    file_objs = []
+    file_objs: List[Dict[str, Any]] = []
     for f in files:
         data = await f.read()
         file_objs.append(
@@ -69,7 +66,6 @@ async def upload_workspace_data(
 
     try:
         file_objs = await _read_files(files)
-
         total_chunks = 0
 
         for file_obj in file_objs:
@@ -79,11 +75,13 @@ async def upload_workspace_data(
 
             chunks = gemini_client.chunk_text_for_rag(text)
             for idx, chunk in enumerate(chunks):
-                chunk_text = chunk.get("text", "").strip()
+                chunk_text = (chunk.get("text") or "").strip()
                 if not chunk_text:
                     continue
 
                 vector = gemini_client.embed_text(chunk_text)
+                if not vector:
+                    continue
 
                 payload = {
                     "workspace_id": workspace_id,
@@ -120,9 +118,12 @@ async def ask_workspace(
 
     try:
         q_vector = gemini_client.embed_text(question)
+        if not q_vector:
+            raise RuntimeError("Failed to embed question")
+
         retrieved = search_chunks(workspace_id, q_vector, limit=5)
 
-        context_chunks = []
+        context_chunks: List[Dict[str, Any]] = []
         for hit in retrieved:
             context_chunks.append(
                 {
@@ -132,7 +133,9 @@ async def ask_workspace(
                 }
             )
 
-        rag_result = run_rag_workflow(question, context_chunks)
+        rag_result = gemini_client.answer_with_context(
+            question=question, context_chunks=context_chunks,
+        )
 
         return {
             "workspace_id": workspace_id,
@@ -150,18 +153,5 @@ async def ask_workspace(
 
 
 async def _extract_text_for_rag(file_obj: Dict[str, Any]) -> str:
-    content_type = (file_obj.get("content_type") or "").lower()
-    data = file_obj["data"]
-
-    if content_type.startswith("image/"):
-        text = aiml_client.ocr_image_to_text(data)
-        if text:
-            return text
-
-    if content_type.startswith("audio/") or content_type in ("video/mp4", "video/mpeg"):
-        text = aiml_client.audio_to_text(data)
-        if text:
-            return text
-
     text = gemini_client.extract_text_from_file(file_obj)
     return text or ""

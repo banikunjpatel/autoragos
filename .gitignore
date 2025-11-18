@@ -1,6 +1,50 @@
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Python environments & caches
+.venv/
 venv/
+env/
+ENV/
 __pycache__/
 *.py[cod]
-.DS_Store
-.env
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Python packaging/build artifacts
+build/
+dist/
+pip-wheel-metadata/
+*.egg-info/
+.eggs/
+
+# Logs & runtime files
 *.log
+*.coverage
+coverage.xml
+
+# Environment files
+.env
+.env.*
+
+# Qdrant, Opus, Gemini creds (if stored separately)
+backend/.env
+
+# Frontend / Node
+client/node_modules/
+client/.vite/
+client/dist/
+client/.turbo/
+client/.next/
+client/.nuxt/
+client/.cache/
+
+# Editor/IDE
+.idea/
+.vscode/
+
+# Misc
+*.pid

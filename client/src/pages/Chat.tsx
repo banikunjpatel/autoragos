@@ -11,8 +11,8 @@ interface Message {
   confidence?: number;
   citations?: Array<{
     doc: string;
-    section: string;
-    snippet: string;
+    source: string;
+    chunk_index: number;
   }>;
   needsReview?: boolean;
 }
@@ -41,35 +41,60 @@ const Chat = () => {
   const handleSend = async () => {
     if (!input.trim()) return;
 
-    const userMessage: Message = { role: "user", content: input };
+    const question = input.trim();
+
+    // Push user message to chat UI
+    const userMessage: Message = { role: "user", content: question };
     setMessages(prev => [...prev, userMessage]);
+
     setInput("");
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const confidence = Math.random() * 0.3 + 0.7; // 0.7 to 1.0
-      const needsReview = confidence < 0.75;
+    try {
+      // Choose workspace_id (same as upload)
+      const workspaceId = assistantName.replace(/\s+/g, "_").toLowerCase();
 
+      const response = await fetch(`https://autoragos.onrender.com/api/workspaces/${workspaceId}/ask`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ question }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Request failed");
+      }
+
+      const data = await response.json();
+      const rag = data.rag_result;
+
+      // Create assistant message from API result
       const assistantMessage: Message = {
         role: "assistant",
-        content: "Based on the documents you've uploaded, here's what I found: The policy clearly states that employees must follow the guidelines outlined in section 3.2. This includes adhering to safety protocols and maintaining proper documentation.",
-        confidence: parseFloat(confidence.toFixed(2)),
-        citations: [
-          {
-            doc: "HR_Policy_2024.pdf",
-            section: "Section 3.2: Employee Guidelines",
-            snippet: "...employees must follow the guidelines outlined..."
-          }
-        ],
-        needsReview
+        content: rag.answer,
+        confidence: rag.confidence,
+        citations: rag.citations,
+        needsReview: rag.needs_human_review
+      }
+
+      // Add assistant message to UI
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (err: any) {
+      const errorMessage: Message = {
+        role: "assistant",
+        content: `⚠️ Error: ${err.message || "Something went wrong"}`,
+        confidence: 0,
+        citations: [],
+        needsReview: true,
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
-
   const handleExampleQuestion = (question: string) => {
     setInput(question);
   };
@@ -109,8 +134,8 @@ const Chat = () => {
               >
                 <div className={`max-w-[80%] ${message.role === "user" ? "bg-primary text-primary-foreground" : "bg-card border border-border"} rounded-lg p-4`}>
                   <p className="mb-2">{message.content}</p>
-                  
-                  {message.role === "assistant" && message.confidence && (
+
+                  {message.role === "assistant" && message.confidence > 0 && (
                     <div className="mt-4 pt-4 border-t border-border space-y-3">
                       {/* Confidence */}
                       <div className="flex items-center gap-2 text-sm">
@@ -121,31 +146,43 @@ const Chat = () => {
                       </div>
 
                       {/* Citations */}
-                      {message.citations && (
-                        <div className="space-y-2">
-                          <p className="text-sm text-muted-foreground">Sources:</p>
-                          {message.citations.map((citation, i) => (
-                            <div key={i} className="bg-muted/50 rounded p-2 text-sm">
-                              <div className="flex items-center gap-2 mb-1">
-                                <FileText className="h-3 w-3" />
-                                <span className="font-medium">{citation.doc}</span>
+                      {message.citations && (() => {
+                        const uniqueCitations = [];
+                        const seen = new Set();
+
+                        message.citations.forEach(c => {
+                          if (!seen.has(c.source)) {
+                            seen.add(c.source);
+                            uniqueCitations.push(c);
+                          }
+                        });
+
+                        return (
+                          <div className="space-y-2">
+                            <p className="text-sm text-muted-foreground">Sources:</p>
+
+                            {uniqueCitations.map((citation, i) => (
+                              <div key={i} className="bg-muted/50 rounded p-2 text-sm">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <FileText className="h-3 w-3" />
+                                  <span className="font-medium">{citation.source}</span>
+                                </div>
                               </div>
-                              <p className="text-xs text-muted-foreground">{citation.section}</p>
-                              <p className="text-xs italic mt-1">{citation.snippet}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                            ))}
+                          </div>
+                        );
+                      })()}
 
                       {/* Review Warning */}
-                      {message.needsReview && (
+                     
+                    </div>
+                  )}
+                   {message.role === "assistant"  && message.confidence == 0 && message.needsReview && (
                         <div className="flex items-center gap-2 text-sm text-warning">
                           <AlertTriangle className="h-4 w-4" />
                           <span>Needs human review</span>
                         </div>
                       )}
-                    </div>
-                  )}
                 </div>
               </div>
             ))}

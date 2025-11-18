@@ -105,7 +105,7 @@ const WorkspaceSetup = () => {
       const workspaceId = assistantName.replace(/\s+/g, "_").toLowerCase();
 
       const res = await fetch(
-        `http://127.0.0.1:8001/api/workspaces/${workspaceId}/upload`,
+        `https://autoragos.onrender.com/api/workspaces/${workspaceId}/upload`,
         {
           method: "POST",
           body: formData,

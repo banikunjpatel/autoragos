@@ -20,6 +20,7 @@ const WorkspaceSetup = () => {
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const getFileIcon = (type: string) => {
     if (type.includes("pdf")) return FileText;
@@ -47,7 +48,6 @@ const WorkspaceSetup = () => {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
     const droppedFiles = Array.from(e.dataTransfer.files);
     addFiles(droppedFiles);
   };
@@ -60,24 +60,24 @@ const WorkspaceSetup = () => {
   };
 
   const addFiles = (newFiles: File[]) => {
-    const fileData = newFiles.map(f => ({
+    const fileData = newFiles.map((f) => ({
       name: f.name,
       type: f.type,
-      size: f.size
+      size: f.size,
     }));
-    setFiles(prev => [...prev, ...fileData]);
+    setFiles((prev) => [...prev, ...fileData]);
   };
 
   const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!assistantName.trim()) {
       toast({
         title: "Name required",
         description: "Please give your assistant a name",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -86,23 +86,63 @@ const WorkspaceSetup = () => {
       toast({
         title: "Files required",
         description: "Please upload at least one file",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
-    navigate("/processing", { 
-      state: { 
-        assistantName, 
-        description, 
-        fileCount: files.length 
-      } 
-    });
+    try {
+      setIsSubmitting(true);
+      const formData = new FormData();
+
+      const input = document.getElementById("file-input") as HTMLInputElement;
+      if (input?.files) {
+        for (let i = 0; i < input.files.length; i++) {
+          formData.append("files", input.files[i]);
+        }
+      }
+
+      const workspaceId = assistantName.replace(/\s+/g, "_").toLowerCase();
+
+      const res = await fetch(
+        `http://127.0.0.1:8001/api/workspaces/${workspaceId}/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const data = await res.json();
+
+      toast({
+        title: "Success",
+        description: `Uploaded and processed ${data.chunks_indexed} chunks.`,
+      });
+
+      navigate("/processing", {
+        state: {
+          assistantName,
+          description,
+          fileCount: files.length,
+        },
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to upload files",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center gap-2">
           <Sparkles className="h-6 w-6 text-primary" />
@@ -110,7 +150,6 @@ const WorkspaceSetup = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-12 max-w-3xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Create Your Assistant</h1>
@@ -119,7 +158,6 @@ const WorkspaceSetup = () => {
           </p>
         </div>
 
-        {/* Assistant Details */}
         <div className="space-y-6 mb-8">
           <div>
             <Label htmlFor="name">Assistant Name *</Label>
@@ -145,20 +183,22 @@ const WorkspaceSetup = () => {
           </div>
         </div>
 
-        {/* File Upload Zone */}
         <div className="mb-6">
           <Label>Upload Files *</Label>
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={`
-              mt-2 border-2 border-dashed rounded-lg p-12 text-center transition-colors
-              ${isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}
-            `}
+            className={`mt-2 border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
+              isDragging
+                ? "border-primary bg-primary/5"
+                : "border-border hover:border-primary/50"
+            }`}
           >
             <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-lg font-medium mb-2">Drop files here or click to browse</p>
+            <p className="text-lg font-medium mb-2">
+              Drop files here or click to browse
+            </p>
             <p className="text-sm text-muted-foreground mb-4">
               Supports: PDF, PNG, JPG, MP3, DOCX
             </p>
@@ -170,13 +210,15 @@ const WorkspaceSetup = () => {
               id="file-input"
               accept=".pdf,.png,.jpg,.jpeg,.mp3,.docx"
             />
-            <Button variant="outline" onClick={() => document.getElementById('file-input')?.click()}>
+            <Button
+              variant="outline"
+              onClick={() => document.getElementById("file-input")?.click()}
+            >
               Select Files
             </Button>
           </div>
         </div>
 
-        {/* File List */}
         {files.length > 0 && (
           <div className="space-y-3 mb-8">
             <Label>Uploaded Files ({files.length})</Label>
@@ -190,7 +232,9 @@ const WorkspaceSetup = () => {
                   <Icon className="h-5 w-5 text-primary shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{file.name}</p>
-                    <p className="text-sm text-muted-foreground">{formatFileSize(file.size)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatFileSize(file.size)}
+                    </p>
                   </div>
                   <Button
                     variant="ghost"
@@ -205,14 +249,14 @@ const WorkspaceSetup = () => {
           </div>
         )}
 
-        {/* Submit Button */}
         <Button
           variant="hero"
           size="lg"
           className="w-full"
           onClick={handleSubmit}
+          disabled={isSubmitting}
         >
-          Process Files and Build Assistant
+          {isSubmitting ? "Processing..." : "Process Files and Build Assistant"}
         </Button>
       </main>
     </div>
